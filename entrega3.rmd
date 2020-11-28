@@ -1,0 +1,28 @@
+---
+title: "Redes Sociales y Económicas"
+author: Miquel Antoni Llambías Cabot
+date: 11/28/2020
+output: html_notebook
+---
+
+# Entrega 3
+
+```{r load libraries}
+
+```
+
+```{r load data}
+
+```
+
+## 1. Implementar el cálculo de las matrices de los núcleos de Neumann. La función debería tener dos parámetros: la matriz de adyacencia y el grado de difusión.
+
+```{r}
+
+```
+
+## 2. Aplicar el algoritmo a la matriz de adyacencia de páginas webs: webPageLinks.txt. Responda, con estos datos, el ejercicio 6.7 del libro.
+
+```{r}
+
+```
