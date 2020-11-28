@@ -8,21 +8,107 @@ output: html_notebook
 # Entrega 3
 
 ```{r load libraries}
-
+library(igraph)
+library(SparseM)
 ```
 
 ```{r load data}
+rawMatrix <- as.matrix(
+    read.table("data/webPageLinks.txt", header=T, sep="	", row.names = 1))
+webPageLinks <- graph.adjacency(rawMatrix)
+```
 
+```{r describe the graph}
+is_connected(webPageLinks)
+#plot(webPageLinks, vertex.label=NA)
 ```
 
 ## 1. Implementar el cálculo de las matrices de los núcleos de Neumann. La función debería tener dos parámetros: la matriz de adyacencia y el grado de difusión.
 
-```{r}
+Input: D: a p × p direct product matrix of two graphs
+Output: γ: Decay constant
+
+1. maxIndegree = `0`
+1. maxOutdegree = `0`
+1. foreach `vertex vi ∈ direct product matrix D` do
+2. outdegree = `Pp j=1 Di,j`
+2. indegree = `Pp j=1 Dj,i`
+2. maxIndegree = `max(indegree, maxIndegree)`
+2. maxOutdegree = `max(outdegree, maxOutdegree)`
+2. end
+1. Set `γ < 1/min(maxIndegree, maxOutdegree)`
+1 return γ
+
+```{r function DecayConstant}
+
+DecayConstant <- function (A) {
+  if(!is.matrix(A)) throw("A must be a matrix")
+
+  n <- length(A[1,])
+  if(n != length(A[,1])) throw("only sqare matrix allowed")
+
+  maxIndegree <- 0
+  maxOutdegree <- 0
+  for(i in 1:n) {
+    indegree <- 0
+    outdegree <- 0
+    for(j in 1:n) {
+      indegree <- indegree + A[j,i]
+      outdegree <- indegree + A[i,j]
+    }
+    maxIndegree <- max(indegree, maxIndegree)
+    maxOutdegree <- max(outdegree, maxOutdegree)
+  }
+
+  gamma <- 1/min(maxIndegree, maxOutdegree)
+}
+
+```
+
+Input: G—a directed graph representing a collection of items (e.g., web pages)
+Output: `Kbγ` and `Tbγ`, Neumann Kernel matrices
+
+1.  A ← adjacency matrix of `G`
+1.  Compute `AT`
+1.  K ← `ATA`
+1.  T ← `AAT`
+1.  Compute `∆+(G) and ∆−(G)`
+1.  Choose γ between 0 and `1/(min{∆+(G),∆−(G)})`
+1.  Compute Kbγ ← `K(I − γK)^−1`
+1.  Compute Tbγ ← `T(I − γT)^−1`
+1.  return `Kbγ`, `Tbγ`
+
+
+Steps 5 and 6 are exchanged by the diffusionFactor
+
+```{r function NeumannKernelMatrix}
+
+NeumannKernelMatrix <- function (A, diffusionFactor) {
+  if(!is.matrix(A)) throw("A must be a matrix")
+  n <- length(A[1,])
+  if(n != length(A[,1])) throw("only sqare matrix allowed")
+
+  AT <- t(A)
+  K <- AT %*% A
+  T <- A %*% AT
+  I <- diag(n)
+  Kby <- K %*% solve(I - diffusionFactor*K)
+  Tby <- T %*% solve(I - diffusionFactor*T)
+
+  result <- list("Kby"=Kby, "Tby"=Tby)
+}
 
 ```
 
 ## 2. Aplicar el algoritmo a la matriz de adyacencia de páginas webs: webPageLinks.txt. Responda, con estos datos, el ejercicio 6.7 del libro.
 
 ```{r}
+decayConstant <- DecayConstant(rawMatrix)
+print(paste("choose between 0 and", decayConstant, sep = " "))
+```
+
+To check
+```{r}
+result <- NeumannKernelMatrix(rawMatrix, 0)
 
 ```
