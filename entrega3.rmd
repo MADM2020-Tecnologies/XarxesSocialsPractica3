@@ -93,7 +93,7 @@ NeumannKernelMatrix <- function (A, diffusionFactor) {
 ### 2. Aplicar el algoritmo a la matriz de adyacencia de páginas webs: webPageLinks.txt. Responda, con estos datos, el ejercicio 6.7 del libro.
 
 ```{r load libraries}
-#library(igraph)
+library(igraph)
 ```
 
 ```{r load data}
@@ -101,13 +101,9 @@ adjacency_matrix <- as.matrix(
         read.table("data/webPageLinks.txt", header=T, sep="	", row.names = 1))
 ```
 
-```{r describe the graph}
-#webPageLinks <- graph.adjacency(rawMatrix)
-#is_connected(webPageLinks)
-#plot(webPageLinks, vertex.label=NA)
-```
 
-```{r}
+Calcular el valor máximo de `γ`
+```{r, echo = F}
 decayConstant <- DecayConstant(adjacency_matrix)
 if(is.numeric(decayConstant)){
   print(paste("choose between 0 and", decayConstant, sep = " "))
@@ -116,17 +112,39 @@ if(is.numeric(decayConstant)){
 }
 ```
 
+
 #### (a) Describe how the HITS algorithm relates to the Neumann Kernel technique.
 
+Si escogemos un valor alto de `γ` la matriz `K` veremos que el resultado es similar a HITS
+
+Calculemos `K` para el valor `γ = 0.032258064516129`
 ```{r}
-result <- NeumannKernelMatrix(adjacency_matrix, decayConstant) # fa de
+result <- NeumannKernelMatrix(adjacency_matrix, decayConstant)
 ```
 
 ```{r}
 KbyGraph <- graph.adjacency(result$Kby)
-plot(KbyGraph, vertex.label=NA) # LOL, no serveix o no ho se interpretar
-components(KbyGraph)$no
+TbyGraph <- graph.adjacency(result$Tby)
+
+#plot(KbyGraph, vertex.label=NA)
+#plot(TbyGraph, vertex.label=NA)
 ```
+
+Calculamos HITS para este mismo grafo usando Hubs i Authorities
+```{r}
+hub <- hub_score(adjacency_matrix, weights = NA)
+authority <- authority.score(adjacency_matrix, weights = NA)
+
+```
+
+```{r}
+KbyGraph <- graph.adjacency(result$Kby)
+plot(KbyGraph, vertex.label=NA)
+```
+
+#### (b) How does the decay factor γ affect the output of the Neumann Kernel algorithm?
+
+
 ```{r}
 result <- NeumannKernelMatrix(adjacency_matrix, 0) # Choosing a value of γ = 0 results in the co-citation matrix
 ```
@@ -134,9 +152,4 @@ result <- NeumannKernelMatrix(adjacency_matrix, 0) # Choosing a value of γ = 0 
 ```{r}
 KbyGraph <- graph.adjacency(result$Kby)
 plot(KbyGraph, vertex.label=NA)
-components(KbyGraph)$no
 ```
-
-#### (b) How does the decay factor γ affect the output of the Neumann Kernel algorithm?
-
-
