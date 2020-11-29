@@ -5,25 +5,9 @@ date: 11/28/2020
 output: html_notebook
 ---
 
-# Entrega 3
+## Entrega 3
 
-```{r load libraries}
-library(igraph)
-library(SparseM)
-```
-
-```{r load data}
-rawMatrix <- as.matrix(
-    read.table("data/webPageLinks.txt", header=T, sep="	", row.names = 1))
-webPageLinks <- graph.adjacency(rawMatrix)
-```
-
-```{r describe the graph}
-is_connected(webPageLinks)
-#plot(webPageLinks, vertex.label=NA)
-```
-
-## 1. Implementar el cálculo de las matrices de los núcleos de Neumann. La función debería tener dos parámetros: la matriz de adyacencia y el grado de difusión.
+### 1. Implementar el cálculo de las matrices de los núcleos de Neumann. La función debería tener dos parámetros: la matriz de adyacencia y el grado de difusión.
 
 Input: D: a p × p direct product matrix of two graphs
 Output: γ: Decay constant
@@ -42,10 +26,10 @@ Output: γ: Decay constant
 ```{r function DecayConstant}
 
 DecayConstant <- function (A) {
-  if(!is.matrix(A)) throw("A must be a matrix")
+  if(!is.matrix(A)) return("A must be a matrix")
 
   n <- length(A[1,])
-  if(n != length(A[,1])) throw("only sqare matrix allowed")
+  if(n != length(A[,1])) return("only sqare matrix allowed")
 
   maxIndegree <- 0
   maxOutdegree <- 0
@@ -60,7 +44,7 @@ DecayConstant <- function (A) {
     maxOutdegree <- max(outdegree, maxOutdegree)
   }
 
-  gamma <- 1/min(maxIndegree, maxOutdegree)
+  return(1/min(maxIndegree, maxOutdegree))
 }
 
 ```
@@ -84,9 +68,15 @@ Steps 5 and 6 are exchanged by the diffusionFactor
 ```{r function NeumannKernelMatrix}
 
 NeumannKernelMatrix <- function (A, diffusionFactor) {
-  if(!is.matrix(A)) throw("A must be a matrix")
+  if(!is.matrix(A)) {
+    print("A must be a matrix")
+    return(NULL)
+  }
   n <- length(A[1,])
-  if(n != length(A[,1])) throw("only sqare matrix allowed")
+  if(n != length(A[,1])) {
+    print("only sqare matrix allowed")
+    return(NULL)
+  }
 
   AT <- t(A)
   K <- AT %*% A
@@ -95,20 +85,58 @@ NeumannKernelMatrix <- function (A, diffusionFactor) {
   Kby <- K %*% solve(I - diffusionFactor*K)
   Tby <- T %*% solve(I - diffusionFactor*T)
 
-  result <- list("Kby"=Kby, "Tby"=Tby)
+  return(list("Kby"=as.matrix(Kby), "Tby"=as.matrix(Tby)))
 }
 
 ```
 
-## 2. Aplicar el algoritmo a la matriz de adyacencia de páginas webs: webPageLinks.txt. Responda, con estos datos, el ejercicio 6.7 del libro.
+### 2. Aplicar el algoritmo a la matriz de adyacencia de páginas webs: webPageLinks.txt. Responda, con estos datos, el ejercicio 6.7 del libro.
 
-```{r}
-decayConstant <- DecayConstant(rawMatrix)
-print(paste("choose between 0 and", decayConstant, sep = " "))
+```{r load libraries}
+#library(igraph)
 ```
 
-To check
-```{r}
-result <- NeumannKernelMatrix(rawMatrix, 0)
-
+```{r load data}
+adjacency_matrix <- as.matrix(
+        read.table("data/webPageLinks.txt", header=T, sep="	", row.names = 1))
 ```
+
+```{r describe the graph}
+#webPageLinks <- graph.adjacency(rawMatrix)
+#is_connected(webPageLinks)
+#plot(webPageLinks, vertex.label=NA)
+```
+
+```{r}
+decayConstant <- DecayConstant(adjacency_matrix)
+if(is.numeric(decayConstant)){
+  print(paste("choose between 0 and", decayConstant, sep = " "))
+} else {
+  decayConstant
+}
+```
+
+#### (a) Describe how the HITS algorithm relates to the Neumann Kernel technique.
+
+```{r}
+result <- NeumannKernelMatrix(adjacency_matrix, decayConstant) # fa de
+```
+
+```{r}
+KbyGraph <- graph.adjacency(result$Kby)
+plot(KbyGraph, vertex.label=NA) # LOL, no serveix o no ho se interpretar
+components(KbyGraph)$no
+```
+```{r}
+result <- NeumannKernelMatrix(adjacency_matrix, 0) # Choosing a value of γ = 0 results in the co-citation matrix
+```
+
+```{r}
+KbyGraph <- graph.adjacency(result$Kby)
+plot(KbyGraph, vertex.label=NA)
+components(KbyGraph)$no
+```
+
+#### (b) How does the decay factor γ affect the output of the Neumann Kernel algorithm?
+
+
