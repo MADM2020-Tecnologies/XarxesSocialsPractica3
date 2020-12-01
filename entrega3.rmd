@@ -53,14 +53,14 @@ Input: G—a directed graph representing a collection of items (e.g., web pages)
 Output: `Kbγ` and `Tbγ`, Neumann Kernel matrices
 
 1.  A ← adjacency matrix of `G`
-1.  Compute `AT`
-1.  K ← `ATA`
-1.  T ← `AAT`
-1.  Compute `∆+(G) and ∆−(G)`
-1.  Choose γ between 0 and `1/(min{∆+(G),∆−(G)})`
-1.  Compute Kbγ ← `K(I − γK)^−1`
-1.  Compute Tbγ ← `T(I − γT)^−1`
-1.  return `Kbγ`, `Tbγ`
+2.  Compute `AT`
+3.  K ← `ATA`
+4.  T ← `AAT`
+5.  Compute `∆+(G) and ∆−(G)`
+6.  Choose γ between 0 and `1/(min{∆+(G),∆−(G)})`
+7.  Compute Kbγ ← `K(I − γK)^−1`
+8.  Compute Tbγ ← `T(I − γT)^−1`
+9.  return `Kbγ`, `Tbγ`
 
 
 Steps 5 and 6 are exchanged by the diffusionFactor
@@ -98,7 +98,7 @@ library(igraph)
 
 ```{r load data}
 adjacency_matrix <- as.matrix(
-        read.table("data/webPageLinks.txt", header=T, sep="	", row.names = 1))
+        read.table("webPageLinks.txt", header=T, sep="	", row.names = 1))
 ```
 
 
@@ -115,7 +115,10 @@ if(is.numeric(decayConstant)){
 
 #### (a) Describe how the HITS algorithm relates to the Neumann Kernel technique.
 
-Si escogemos un valor alto de `γ` la matriz `K` veremos que el resultado es similar a HITS
+Si escogemos un valor alto de `γ` la matriz `K` veremos que el resultado es similar a HITS.
+
+Al elegir un valor alto de `Y` le damos mucho peso relativo a los vértices más lejanos en el gráfo.
+
 
 Calculemos `K` para el valor `γ = 0.032258064516129`
 ```{r}
@@ -126,30 +129,105 @@ result <- NeumannKernelMatrix(adjacency_matrix, decayConstant)
 KbyGraph <- graph.adjacency(result$Kby)
 TbyGraph <- graph.adjacency(result$Tby)
 
+KbyGraph
+TbyGraph
+
 #plot(KbyGraph, vertex.label=NA)
 #plot(TbyGraph, vertex.label=NA)
 ```
 
 Calculamos HITS para este mismo grafo usando Hubs i Authorities
 ```{r}
-hub <- hub_score(adjacency_matrix, weights = NA)
-authority <- authority.score(adjacency_matrix, weights = NA)
+
+hits.graph <- graph.adjacency(adjacency_matrix)
+
+
+hub <- hub_score(hits.graph, weights = NA)$vector
+authority <- authority_score(hits.graph, weights = NA)$vector
+
+hub.final <- names(sort(hub, decreasing = TRUE)[1:10])
+authority.final <- names(sort(authority, decreasing = TRUE)[1:10])
+
+hub.final
+authority.final
 
 ```
 
-```{r}
-KbyGraph <- graph.adjacency(result$Kby)
-plot(KbyGraph, vertex.label=NA)
-```
+¿¿¿???? Podemos ver como las páginas con más hipervinculos (hubs) serian las 
+relacionadas con google como cabe esperar.
+
+Con las authority pasa algo similar ya que prácticamente todo pasa por
+google.
+
+Al compararlo con los resultados obtenidos por el algoritmo de Neumann
+observamos como muchas webs coinciden. 
+
+Observamos pues que con un valor elevado de `Y`, el algoritmo de Neumann 
+es muy parecido a los HITS scores. 
+
+Al `Y` más elevado predomina más la importancia global que la relación. 
 
 #### (b) How does the decay factor γ affect the output of the Neumann Kernel algorithm?
 
+Como hemos comentado en el apartado a), al elegir un valor elevado de `Y`, incrementamos el valor relativo de los vértices más lejanos. Aumentaria la importancia global por encima de las relaciones de vecindad. 
+
 
 ```{r}
-result <- NeumannKernelMatrix(adjacency_matrix, 0) # Choosing a value of γ = 0 results in the co-citation matrix
+result2 <- NeumannKernelMatrix(adjacency_matrix, 0) # Choosing a value of γ = 0 results in the co-citation matrix
+
+KbyGraph2 <- graph.adjacency(result2$Kby)
+TbyGraph2 <- graph.adjacency(result2$Tby)
+
+
+#plot(KbyGraph, vertex.label=NA)
+
 ```
 
+Al elegir el valor de `Y`= 0, no damos ningun peso a los vértices más lejanos, por lo que observando que los algoritmos de Neumann Kernel; 
+
+Tbγ ← `T(I − γT)^−1` 
+Kbγ ← `K(I − γK)^−1`
+
+Si `Y` = 0
+
+Tby = T
+Kby = K
+
+El algoritmo de Neumann Kernel va a ser simplemente la relación entre los vertices, es decir, la matriz de correlación de documentos K y la matriz de 
+correlación de términos T. 
+
+A continuación comprobaremos lo comentado. 
+
 ```{r}
-KbyGraph <- graph.adjacency(result$Kby)
-plot(KbyGraph, vertex.label=NA)
+
+Adj <- adjacency_matrix
+
+K <- t(Adj) %*% Adj
+T <- Adj %*% t(Adj)
+
+K.graph <- graph.adjacency(K)
+T.graph <- graph.adjacency(T)
+
+
+
 ```
+
+
+
+
+```{r}
+
+K.graph
+T.graph
+
+KbyGraph2
+TbyGraph2
+
+```
+
+Observamos como efectivamente si `Y`= 0 se cumple 
+
+Tby = T
+Kby = K
+
+
