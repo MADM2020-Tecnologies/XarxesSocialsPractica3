@@ -1,11 +1,13 @@
 ---
 title: "Redes Sociales y Económicas"
-author: Miquel Antoni Llambías Cabot
 date: 11/28/2020
 output: html_notebook
 ---
 
 ## Entrega 3
+
+*Name* Miquel Antoni Llambías Cabot
+*Name* Guillermo Gavilla Hernández
 
 ### 1. Implementar el cálculo de las matrices de los núcleos de Neumann. La función debería tener dos parámetros: la matriz de adyacencia y el grado de difusión.
 
@@ -92,13 +94,10 @@ NeumannKernelMatrix <- function (A, diffusionFactor) {
 
 ### 2. Aplicar el algoritmo a la matriz de adyacencia de páginas webs: webPageLinks.txt. Responda, con estos datos, el ejercicio 6.7 del libro.
 
-```{r load libraries}
-library(igraph)
-```
 
 ```{r load data}
 adjacency_matrix <- as.matrix(
-        read.table("webPageLinks.txt", header=T, sep="	", row.names = 1))
+        read.table("data/webPageLinks.txt", header=T, sep="	", row.names = 1))
 ```
 
 
@@ -121,71 +120,78 @@ Al elegir un valor alto de `Y` le damos mucho peso relativo a los vértices más
 
 
 Calculemos `K` para el valor `γ = 0.032258064516129`
-```{r}
-result <- NeumannKernelMatrix(adjacency_matrix, decayConstant)
+```{r calcular Ky y Ty}
+#result <- NeumannKernelMatrix(adjacency_matrix, diffusionFactor = 0)
+#result <- NeumannKernelMatrix(adjacency_matrix, diffusionFactor = 0.02)
+#result <- NeumannKernelMatrix(adjacency_matrix, diffusionFactor = 0.03)
+#result <- NeumannKernelMatrix(adjacency_matrix, diffusionFactor = decayConstant)
+result <- NeumannKernelMatrix(adjacency_matrix, diffusionFactor = 0.01) # best match with HITS
 ```
 
-```{r}
-KbyGraph <- graph.adjacency(result$Kby)
-TbyGraph <- graph.adjacency(result$Tby)
-
-KbyGraph
-TbyGraph
-
-#plot(KbyGraph, vertex.label=NA)
-#plot(TbyGraph, vertex.label=NA)
+Para transformar la matriz Kγ resultado de aplicar el algoritmo a un listado de score usaremos la función definida a continuación `CalculateScores`. Esta función transforma la matriz en una lista de scores haciendo el sumatorio de los valores de cada fila.
+```{r CalculateScores Function}
+CalculateScores <- function (A) {
+  list <- NULL
+  Names <- names(A[,1])
+  for(i in seq_along(A[, 1])) {
+    sumFila <- 0
+    for(j in seq_along(A[i,])) {
+      sumFila <- sumFila + A[i,j]
+    }
+    #element <- list(label=Names[i], value=sumFila)
+    element <- sumFila
+    names(element) <- Names[i]
+    list <- append(list, element)
+  }
+  list
+}
 ```
+
+Calculamos los scores para la matriz Kγ y listamos los primeros con mayor puntuación
+```{r calcular score para Ky}
+Kscores <- CalculateScores(result$Kby)
+Tscores <- CalculateScores(result$Tby)
+
+Kscores.final <- head(sort(Kscores, decreasing = TRUE))
+Tscores.final <- head(sort(Tscores, decreasing = TRUE))
+
+data.frame(names(Kscores.final), Kscores.final, names(Tscores.final), Tscores.final)
+```
+
 
 Calculamos HITS para este mismo grafo usando Hubs i Authorities
 ```{r}
+library(igraph)
 
 hits.graph <- graph.adjacency(adjacency_matrix)
 
+hub <- hub.score(hits.graph, weights = NA)$vector
+authority <- authority.score(hits.graph, weights = NA)$vector
 
-hub <- hub_score(hits.graph, weights = NA)$vector
-authority <- authority_score(hits.graph, weights = NA)$vector
+hub.final <- head(sort(hub, decreasing = TRUE))
+authority.final <- head(sort(authority, decreasing = TRUE))
 
-hub.final <- names(sort(hub, decreasing = TRUE)[1:10])
-authority.final <- names(sort(authority, decreasing = TRUE)[1:10])
-
-hub.final
-authority.final
-
+data.frame(names(hub.final), hub.final, names(authority.final), authority.final)
 ```
 
-¿¿¿???? Podemos ver como las páginas con más hipervinculos (hubs) serian las 
-relacionadas con google como cabe esperar.
+Comparamos los primeros con mayor puntuación obtenidos anteriormente.
+Tras probar distintos valores de diffusionFactor (0, 0.01, 0.02, 0.03 y el máximo) hemos encontrado que para un valor de difusión de 0.1 el algoritmo de Neumann Kernel se comporta como el algoritmo de HITS como mostramos a continuación.
+```{r}
+data.frame(names(Kscores.final), Kscores.final, names(authority.final), authority.final, names(Tscores.final), Tscores.final, names(hub.final), hub.final)
+```
+Hemos comparado solo los de mayor puntuación porque son los que consideramos que son más significativos para comparar.
 
-Con las authority pasa algo similar ya que prácticamente todo pasa por
-google.
 
-Al compararlo con los resultados obtenidos por el algoritmo de Neumann
-observamos como muchas webs coinciden. 
+Según el libro, al elevar el valor de `γ`, el algoritmo de Neumann debería dar un resultado muy parecido a los HITS scores. Como hemos visto, no necesariamente se necesita un valor alto. En este caso con `γ = 0.01` sobre un valor máximo de `γ = 0.032258064516129` se ha encontrado el equilibrio.
 
-Observamos pues que con un valor elevado de `Y`, el algoritmo de Neumann 
-es muy parecido a los HITS scores. 
-
-Al `Y` más elevado predomina más la importancia global que la relación. 
 
 #### (b) How does the decay factor γ affect the output of the Neumann Kernel algorithm?
 
-Como hemos comentado en el apartado a), al elegir un valor elevado de `Y`, incrementamos el valor relativo de los vértices más lejanos. Aumentaria la importancia global por encima de las relaciones de vecindad. 
+Como hemos comentado en el apartado a), al elegir un valor elevado de `γ`, incrementamos el valor relativo de los vértices más lejanos. Aumentaría la importancia global por encima de las relaciones de vecindad.
 
+Al elegir el valor de `Y`= 0, no damos ningún peso a los vértices más lejanos, por lo que observando que los algoritmos de Neumann Kernel;
 
-```{r}
-result2 <- NeumannKernelMatrix(adjacency_matrix, 0) # Choosing a value of γ = 0 results in the co-citation matrix
-
-KbyGraph2 <- graph.adjacency(result2$Kby)
-TbyGraph2 <- graph.adjacency(result2$Tby)
-
-
-#plot(KbyGraph, vertex.label=NA)
-
-```
-
-Al elegir el valor de `Y`= 0, no damos ningun peso a los vértices más lejanos, por lo que observando que los algoritmos de Neumann Kernel; 
-
-Tbγ ← `T(I − γT)^−1` 
+Tbγ ← `T(I − γT)^−1`
 Kbγ ← `K(I − γK)^−1`
 
 Si `Y` = 0
@@ -193,41 +199,23 @@ Si `Y` = 0
 Tby = T
 Kby = K
 
-El algoritmo de Neumann Kernel va a ser simplemente la relación entre los vertices, es decir, la matriz de correlación de documentos K y la matriz de 
-correlación de términos T. 
+El algoritmo de Neumann Kernel va a ser simplemente la relación entre los vertices, es decir, la matriz de correlación de documentos K y la matriz de
+correlación de términos T.
 
-A continuación comprobaremos lo comentado. 
+A continuación comprobaremos lo comentado.
 
 ```{r}
-
+result2 <- NeumannKernelMatrix(adjacency_matrix, 0) # Choosing a value of γ = 0 results in the co-citation matrix
 Adj <- adjacency_matrix
 
 K <- t(Adj) %*% Adj
 T <- Adj %*% t(Adj)
 
-K.graph <- graph.adjacency(K)
-T.graph <- graph.adjacency(T)
-
-
-
+identical(K, result2$Kby)
+identical(T, result2$Tby)
 ```
 
-
-
-
-```{r}
-
-K.graph
-T.graph
-
-KbyGraph2
-TbyGraph2
-
-```
-
-Observamos como efectivamente si `Y`= 0 se cumple 
+Observamos como efectivamente si `Y`= 0 se cumple
 
 Tby = T
 Kby = K
-
-
