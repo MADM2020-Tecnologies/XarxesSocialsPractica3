@@ -6,8 +6,8 @@ output: html_notebook
 
 ## Entrega 3
 
-*Name* Miquel Antoni Llambías Cabot
-*Name* Guillermo Gavilla Hernández
+- Miquel Antoni Llambías Cabot
+- Guillermo Gavilla Hernández
 
 ### 1. Implementar el cálculo de las matrices de los núcleos de Neumann. La función debería tener dos parámetros: la matriz de adyacencia y el grado de difusión.
 
